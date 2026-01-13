@@ -2,8 +2,9 @@ import math
 import warnings
 
 import torch
+from max.experimental import functional as max_F
+from max.experimental.tensor import Tensor
 from torch import nn
-from torch.nn import functional as F
 
 from pocket_tts.modules.stateful_module import StatefulModule
 
@@ -30,7 +31,13 @@ def pad_for_conv1d(x: torch.Tensor, kernel_size: int, stride: int, padding_total
             1 2 3 4         # once you removed padding, we are missing one time step !
     """
     extra_padding = get_extra_padding_for_conv1d(x, kernel_size, stride, padding_total)
-    return F.pad(x, (0, extra_padding))
+    # Convert torch tensor to MAX tensor using DLPack, pad, then convert back
+    max_tensor = Tensor.from_dlpack(x)
+    # Pad all dimensions: (batch_before, batch_after, channel_before, channel_after, time_before, time_after)
+    # For 1D conv with 3D tensor (batch, channel, time), we only pad the time dimension
+    padded_max = max_F.pad(max_tensor, (0, 0, 0, 0, 0, extra_padding))
+    # Convert back to torch tensor using DLPack
+    return torch.from_dlpack(padded_max)
 
 
 class StreamingConv1d(StatefulModule):
