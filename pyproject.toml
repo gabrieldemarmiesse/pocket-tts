@@ -21,6 +21,10 @@ dependencies = [
     "einops>=0.4.0",
     "huggingface_hub>=0.10",
     "requests>=2.20.0",
+    "max==26.1.0.dev2026011220",
+    "max-core==26.1.0.dev2026011220",
+    "max-mojo-libs==26.1.0.dev2026011220",
+    "mojo-compiler==0.26.1.0.dev2026011220",
 ]
 
 
@@ -37,10 +41,27 @@ dev = [
 torch = [
     { index = "pytorch-cpu" },
 ]
+max = [
+    { index = "max-nightly" },
+]
+max-core = [
+    { index = "max-nightly" },
+]
+max-mojo-libs = [
+    { index = "max-nightly" },
+]
+mojo-compiler = [
+    { index = "max-nightly" },
+]
 
 [[tool.uv.index]]
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
+explicit = true
+
+[[tool.uv.index]]
+name = "max-nightly"
+url = "https://whl.modular.com/nightly/simple/"
 explicit = true
 
 [tool.ruff]
@@ -66,6 +87,7 @@ pocket-tts = "pocket_tts.main:cli_app"
 # System python distribution can have header files missing, so we use only the python
 # distributions provided by uv which have everything included.
 python-preference = "only-managed"
+prerelease = "allow"
 
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
