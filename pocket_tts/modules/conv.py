@@ -105,19 +105,43 @@ class StreamingConv1d(StatefulModule):
         else:
             state = self.get_state(model_state)
         TP = state["previous"].shape[-1]
+
+        # Convert to MAX tensors for processing
+        from max.experimental.tensor import Tensor
+
+        max_x = Tensor.from_dlpack(x.detach().contiguous())
+        max_previous = Tensor.from_dlpack(state["previous"].detach().contiguous())
+        max_first = Tensor.from_dlpack(state["first"].detach().contiguous())
+
         if TP and self.pad_mode == "replicate":
             assert T >= TP, "Not enough content to pad streaming."
-            init = x[..., :1]
-            state["previous"][:] = torch.where(
-                state["first"].view(-1, 1, 1), init, state["previous"]
-            )
+            init = max_x[..., :1]
+            # Use MAX reshape instead of view and MAX where instead of torch.where
+            first_reshaped = max_F.reshape(max_first, (B, 1, 1))
+            max_previous = max_F.where(first_reshaped, init, max_previous)
+            state["previous"][:] = torch.from_dlpack(max_previous)
+
         if TP:
-            x = torch.cat([state["previous"], x], dim=-1)
-        y = self.conv(x)
+            # Use MAX concat instead of torch.cat
+            x = max_F.concat([max_previous, max_x], axis=-1)
+        else:
+            x = max_x
+
+        # Keep PyTorch conv for now (nn.Module), convert back for conv
+        x_torch = torch.from_dlpack(x)
+        y = self.conv(x_torch)
+
         if TP:
-            state["previous"][:] = x[..., -TP:]
+            max_x = Tensor.from_dlpack(x_torch)
+            # Update previous state using slicing
+            state["previous"][:] = torch.from_dlpack(max_x[..., -TP:])
             if self.pad_mode == "replicate":
-                state["first"] = torch.zeros_like(state["first"])
+                # Use MAX constant instead of torch.zeros_like
+                from max.graph import DeviceRef
+
+                max_first = max_F.constant(0, dtype=max_first.dtype, device=DeviceRef.CPU())
+                state["first"] = torch.from_dlpack(max_first)
+
         return y
 
 
