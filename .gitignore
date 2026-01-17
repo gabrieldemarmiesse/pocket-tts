@@ -82,7 +82,11 @@ profile_output*
 *.model
 *.pt
 
-# Agents files, use a symlink to AGENTS.md instead. 
+# Agents files, use a symlink to AGENTS.md instead.
 CLAUDE.md
 QWEN.md
 .claude/
+
+# Context and main directories
+context/
+main/
